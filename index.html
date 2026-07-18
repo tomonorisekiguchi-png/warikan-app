@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>かんたん割り勘アプリ</title>
+<style>
+  :root{
+    --main:#2f9e6e;
+    --main-dark:#237a54;
+    --bg:#f5f7f6;
+    --card:#ffffff;
+    --border:#e2e6e4;
+    --text:#2c332f;
+    --sub:#7a837e;
+    --danger:#e0574c;
+    --warn:#e0a44c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding-bottom:120px;
+  }
+  header{
+    background:var(--main);
+    color:#fff;
+    padding:18px 16px;
+    text-align:center;
+    position:sticky;
+    top:0;
+    z-index:20;
+    box-shadow:0 2px 6px rgba(0,0,0,0.08);
+  }
+  header h1{
+    margin:0;
+    font-size:19px;
+    font-weight:700;
+    letter-spacing:0.02em;
+  }
+  main{
+    max-width:520px;
+    margin:0 auto;
+    padding:16px;
+  }
+  .card{
+    background:var(--card);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.06);
+    border:1px solid var(--border);
+  }
+  .card h2{
+    font-size:15px;
+    margin:0 0 12px;
+    color:var(--main-dark);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .field{
+    margin-bottom:12px;
+  }
+  .field:last-child{margin-bottom:0;}
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color:var(--sub);
+    margin-bottom:4px;
+  }
+  .row2{
+    display:flex;
+    gap:10px;
+  }
+  .row2 .field{flex:1;}
+  input[type=number], input[type=text], select{
+    width:100%;
+    padding:11px 12px;
+    font-size:16px;
+    border:1px solid var(--border);
+    border-radius:9px;
+    background:#fbfcfb;
+    color:var(--text);
+    -webkit-appearance:none;
+  }
+  input:focus, select:focus{
+    outline:none;
+    border-color:var(--main);
+    background:#fff;
+  }
+  .unit-select{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .unit-btn{
+    flex:1;
+    min-width:60px;
+    padding:9px 4px;
+    text-align:center;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:13px;
+    background:#fbfcfb;
+    cursor:pointer;
+    color:var(--sub);
+  }
+  .unit-btn.active{
+    background:var(--main);
+    border-color:var(--main);
+    color:#fff;
+    font-weight:600;
+  }
+  .split-result{
+    margin-top:14px;
+    padding:12px;
+    background:#eef7f1;
+    border-radius:10px;
+    font-size:13.5px;
+    line-height:1.9;
+  }
+  .split-result .big{
+    font-size:22px;
+    font-weight:700;
+    color:var(--main-dark);
+  }
+  .split-result .note{
+    color:var(--sub);
+    font-size:12px;
+  }
+  .apply-btn{
+    width:100%;
+    padding:13px;
+    margin-top:12px;
+    background:var(--main);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .apply-btn:active{background:var(--main-dark);}
+  .apply-btn.secondary{
+    background:#fff;
+    color:var(--main-dark);
+    border:1px solid var(--main);
+  }
+  .person-card{
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:10px;
+    border:1px solid var(--border);
+    background:var(--card);
+    transition:background .15s, border-color .15s;
+  }
+  .person-card.paid{
+    background:#eef8f1;
+    border-color:#bfe3cc;
+  }
+  .person-top{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .person-top input[type=text]{
+    flex:1;
+    font-weight:700;
+    font-size:15px;
+    padding:8px 10px;
+  }
+  .del-btn{
+    background:none;
+    border:none;
+    color:var(--sub);
+    font-size:20px;
+    line-height:1;
+    padding:4px 6px;
+    cursor:pointer;
+  }
+  .person-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .person-grid .field{margin-bottom:0;}
+  .cash-box{
+    margin-top:8px;
+    padding:10px;
+    background:#fbf8ee;
+    border-radius:9px;
+    border:1px dashed #e6d9a8;
+  }
+  .cash-box .field{margin-bottom:8px;}
+  .cash-box .field:last-child{margin-bottom:0;}
+  .change-line{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:14px;
+    font-weight:700;
+    padding:8px 10px;
+    border-radius:8px;
+  }
+  .change-line.ok{background:#eef7f1;color:var(--main-dark);}
+  .change-line.short{background:#fdeeec;color:var(--danger);}
+  .change-line.zero{background:#f1f2f1;color:var(--sub);font-weight:400;}
+  .paid-toggle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:10px;
+    justify-content:flex-end;
+  }
+  .paid-toggle label{
+    font-size:13.5px;
+    color:var(--sub);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .paid-toggle input[type=checkbox]{
+    width:20px;
+    height:20px;
+    accent-color:var(--main);
+    cursor:pointer;
+  }
+  .add-person-btn{
+    width:100%;
+    padding:12px;
+    background:#fff;
+    border:1.5px dashed var(--main);
+    color:var(--main-dark);
+    border-radius:10px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .summary-bar{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:#fff;
+    border-top:1px solid var(--border);
+    box-shadow:0 -2px 8px rgba(0,0,0,0.08);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    z-index:20;
+  }
+  .summary-inner{
+    max-width:520px;
+    margin:0 auto;
+  }
+  .summary-progress{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:6px;
+  }
+  .summary-progress .label{font-size:12px;color:var(--sub);}
+  .summary-progress .amt{font-size:17px;font-weight:700;color:var(--text);}
+  .summary-progress .amt span{color:var(--sub);font-weight:400;font-size:13px;}
+  .progress-track{
+    height:8px;
+    background:#eceeec;
+    border-radius:5px;
+    overflow:hidden;
+    margin-bottom:8px;
+  }
+  .progress-fill{
+    height:100%;
+    background:var(--main);
+    border-radius:5px;
+    transition:width .2s;
+  }
+  .summary-chips{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    font-size:12px;
+  }
+  .chip{
+    padding:4px 9px;
+    border-radius:20px;
+    background:#f1f2f1;
+    color:var(--sub);
+  }
+  .chip.warn{background:#fdf3e2;color:#a3720c;}
+  .chip.danger{background:#fdeeec;color:var(--danger);}
+  .empty-hint{
+    text-align:center;
+    color:var(--sub);
+    font-size:13px;
+    padding:20px 10px;
+  }
+  .reset-link{
+    text-align:center;
+    margin-top:6px;
+  }
+  .reset-link button{
+    background:none;
+    border:none;
+    color:var(--sub);
+    font-size:12.5px;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:8px;
+  }
+  .section-title{
+    font-size:14px;
+    font-weight:700;
+    margin:18px 0 8px 4px;
+    color:var(--text);
+  }
+  .person-card.covered{
+    background:#f6f4fb;
+    border-color:#dcd4ef;
+  }
+  .covered-badge{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:9px 10px;
+    background:#efeafa;
+    color:#5b3fa3;
+    border-radius:9px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .cover-box{
+    margin-top:10px;
+    padding:10px;
+    background:#f6f4fb;
+    border-radius:9px;
+    border:1px dashed #cabdea;
+  }
+  .cover-box .cover-title{
+    font-size:12.5px;
+    color:#5b3fa3;
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .cover-option{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 2px;
+    font-size:13.5px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .cover-option input[type=checkbox]{
+    width:18px;
+    height:18px;
+    accent-color:#5b3fa3;
+    cursor:pointer;
+  }
+  .cover-none{
+    font-size:12.5px;
+    color:var(--sub);
+  }
+  .cover-total{
+    margin-top:8px;
+    padding:9px 10px;
+    background:#efeafa;
+    color:#5b3fa3;
+    border-radius:9px;
+    font-size:13.5px;
+    font-weight:700;
+    display:flex;
+    justify-content:space-between;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💰 かんたん割り勘</h1>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>① 合計金額と人数</h2>
+    <div class="row2">
+      <div class="field">
+        <label>お会計の合計金額（円）</label>
+        <input type="number" id="totalInput" inputmode="numeric" placeholder="例）12800">
+      </div>
+      <div class="field">
+        <label>参加人数</label>
+        <input type="number" id="countInput" inputmode="numeric" min="1" placeholder="例）4">
+      </div>
+    </div>
+    <div class="field">
+      <label>端数の切り上げ単位</label>
+      <div class="unit-select" id="unitSelect">
+        <div class="unit-btn" data-unit="1">1円</div>
+        <div class="unit-btn" data-unit="10">10円</div>
+        <div class="unit-btn active" data-unit="100">100円</div>
+        <div class="unit-btn" data-unit="1000">1000円</div>
+      </div>
+    </div>
+
+    <div class="split-result" id="splitResult" style="display:none;"></div>
+
+    <button class="apply-btn" id="calcBtn">計算して人数分を作成</button>
+  </div>
+
+  <div id="peopleSection" style="display:none;">
+    <div class="section-title">② 一人ずつ確認・回収チェック</div>
+    <div id="peopleList"></div>
+    <button class="add-person-btn" id="addPersonBtn">＋ 参加者を追加</button>
+    <div class="reset-link"><button id="resetBtn">全部リセットする</button></div>
+  </div>
+
+  <div class="empty-hint" id="emptyHint">
+    合計金額と人数を入力して「計算して人数分を作成」を押すと、参加者ごとの割り勘カードが表示されます。
+  </div>
+
+</main>
+
+<div class="summary-bar" id="summaryBar" style="display:none;">
+  <div class="summary-inner">
+    <div class="summary-progress">
+      <div class="label">回収状況</div>
+      <div class="amt" id="collectedAmt">¥0 <span id="collectedOf">/ ¥0</span></div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%;"></div></div>
+    <div class="summary-chips" id="summaryChips"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'warikan-app-state-v1';
+
+  var state = {
+    total: null,
+    count: null,
+    unit: 100,
+    people: []
+  };
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && typeof parsed === 'object'){
+          state = Object.assign(state, parsed);
+        }
+      }
+    }catch(e){}
+  }
+
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){}
+  }
+
+  function yen(n){
+    n = Math.round(n || 0);
+    return '¥' + n.toLocaleString('ja-JP');
+  }
+
+  function ceilTo(value, unit){
+    if(!unit || unit <= 0) unit = 1;
+    return Math.ceil(value / unit) * unit;
+  }
+
+  // --- 立替（他の人の分もまとめて支払う）関連ヘルパー ---
+  function normalizeCoveredIds(p){
+    if(!p.coveredIds) p.coveredIds = [];
+    return p.coveredIds;
+  }
+
+  // このpersonIdが、誰か他の人にまとめて支払われる対象かどうか
+  function findPayerOf(personId){
+    return state.people.find(function(x){
+      return x.coveredIds && x.coveredIds.indexOf(personId) !== -1;
+    }) || null;
+  }
+
+  function isPayer(p){
+    return !!(p.coveredIds && p.coveredIds.length > 0);
+  }
+
+  // 支払い担当者が実際に集める合計額（自分の分＋立替対象の合計）
+  function payTarget(p){
+    var total = parseFloat(p.amount) || 0;
+    if(p.coveredIds && p.coveredIds.length){
+      p.coveredIds.forEach(function(cid){
+        var c = state.people.find(function(x){ return x.id === cid; });
+        if(c) total += (parseFloat(c.amount) || 0);
+      });
+    }
+    return total;
+  }
+
+  var totalInput = document.getElementById('totalInput');
+  var countInput = document.getElementById('countInput');
+  var unitSelect = document.getElementById('unitSelect');
+  var splitResult = document.getElementById('splitResult');
+  var calcBtn = document.getElementById('calcBtn');
+  var peopleSection = document.getElementById('peopleSection');
+  var peopleList = document.getElementById('peopleList');
+  var addPersonBtn = document.getElementById('addPersonBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var emptyHint = document.getElementById('emptyHint');
+  var summaryBar = document.getElementById('summaryBar');
+  var collectedAmt = document.getElementById('collectedAmt');
+  var collectedOf = document.getElementById('collectedOf');
+  var progressFill = document.getElementById('progressFill');
+  var summaryChips = document.getElementById('summaryChips');
+
+  var METHODS = ['現金', 'PayPay', '銀行振込', 'その他'];
+
+  function updateUnitButtons(){
+    var btns = unitSelect.querySelectorAll('.unit-btn');
+    btns.forEach(function(b){
+      b.classList.toggle('active', parseInt(b.dataset.unit,10) === state.unit);
+    });
+  }
+
+  unitSelect.addEventListener('click', function(e){
+    var btn = e.target.closest('.unit-btn');
+    if(!btn) return;
+    state.unit = parseInt(btn.dataset.unit, 10);
+    updateUnitButtons();
+    previewSplit();
+    saveState();
+  });
+
+  function previewSplit(){
+    var total = parseFloat(totalInput.value);
+    var count = parseInt(countInput.value, 10);
+    if(!total || total <= 0 || !count || count <= 0){
+      splitResult.style.display = 'none';
+      return;
+    }
+    var raw = total / count;
+    var perPerson = ceilTo(raw, state.unit);
+    var collectedTotal = perPerson * count;
+    var surplus = collectedTotal - total;
+    splitResult.style.display = 'block';
+    splitResult.innerHTML =
+      '一人あたり　<span class="big">' + yen(perPerson) + '</span><br>' +
+      '<span class="note">端数処理前：' + yen(raw) + ' / ' + count + '人</span><br>' +
+      '<span class="note">集金予定合計：' + yen(collectedTotal) + '（合計より ' + yen(surplus) + ' 多く集まります。予備費か幹事負担にどうぞ）</span>';
+  }
+
+  [totalInput, countInput].forEach(function(el){
+    el.addEventListener('input', previewSplit);
+  });
+
+  calcBtn.addEventListener('click', function(){
+    var total = parseFloat(totalInput.value);
+    var count = parseInt(countInput.value, 10);
+    if(!total || total <= 0){
+      alert('合計金額を入力してください。');
+      return;
+    }
+    if(!count || count <= 0){
+      alert('参加人数を入力してください。');
+      return;
+    }
+    var raw = total / count;
+    var perPerson = ceilTo(raw, state.unit);
+
+    state.total = total;
+    state.count = count;
+    state.people = [];
+    for(var i = 0; i < count; i++){
+      state.people.push({
+        id: 'p' + Date.now() + '_' + i,
+        name: '参加者' + (i + 1),
+        amount: perPerson,
+        method: '現金',
+        paid: false,
+        received: null,
+        coveredIds: []
+      });
+    }
+    saveState();
+    render();
+  });
+
+  addPersonBtn.addEventListener('click', function(){
+    var raw = state.total && state.people.length ? state.total / state.people.length : 0;
+    var perPerson = ceilTo(raw, state.unit) || 0;
+    state.people.push({
+      id: 'p' + Date.now(),
+      name: '参加者' + (state.people.length + 1),
+      amount: perPerson,
+      method: '現金',
+      paid: false,
+      received: null,
+      coveredIds: []
+    });
+    saveState();
+    render();
+  });
+
+  resetBtn.addEventListener('click', function(){
+    if(!confirm('入力内容を全てリセットします。よろしいですか？')) return;
+    state = { total: null, count: null, unit: 100, people: [] };
+    totalInput.value = '';
+    countInput.value = '';
+    updateUnitButtons();
+    splitResult.style.display = 'none';
+    saveState();
+    render();
+  });
+
+  function personCard(p){
+    normalizeCoveredIds(p);
+    var payer = findPayerOf(p.id);
+
+    var wrap = document.createElement('div');
+    wrap.className = 'person-card' + (p.paid ? ' paid' : '') + (payer ? ' covered' : '');
+
+    var top = document.createElement('div');
+    top.className = 'person-top';
+
+    var nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = p.name;
+    nameInput.addEventListener('input', function(){
+      p.name = nameInput.value;
+      saveState();
+      renderSummary();
+    });
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'del-btn';
+    delBtn.innerHTML = '✕';
+    delBtn.title = '削除';
+    delBtn.addEventListener('click', function(){
+      state.people = state.people.filter(function(x){ return x.id !== p.id; });
+      // このpersonを立替対象にしていた人がいれば、そのリストからも外す
+      state.people.forEach(function(x){
+        if(x.coveredIds){
+          x.coveredIds = x.coveredIds.filter(function(cid){ return cid !== p.id; });
+        }
+      });
+      saveState();
+      render();
+    });
+
+    top.appendChild(nameInput);
+    top.appendChild(delBtn);
+    wrap.appendChild(top);
+
+    // 誰かがこの人の分をまとめて立替えている場合はシンプル表示にする
+    if(payer){
+      var grid0 = document.createElement('div');
+      grid0.className = 'person-grid';
+      var amtField0 = document.createElement('div');
+      amtField0.className = 'field';
+      amtField0.innerHTML = '<label>負担額（円）</label>';
+      var amtInput0 = document.createElement('input');
+      amtInput0.type = 'number';
+      amtInput0.inputMode = 'numeric';
+      amtInput0.value = p.amount;
+      amtInput0.addEventListener('input', function(){
+        p.amount = parseFloat(amtInput0.value) || 0;
+        saveState();
+        render();
+      });
+      amtField0.appendChild(amtInput0);
+      grid0.appendChild(amtField0);
+      wrap.appendChild(grid0);
+
+      var badge = document.createElement('div');
+      badge.className = 'covered-badge';
+      badge.innerHTML = '🔗 <span>' + (payer.name || '担当者') + ' さんがまとめて支払います（回収状況もそちらで管理）</span>';
+      wrap.appendChild(badge);
+      return wrap;
+    }
+
+    var grid = document.createElement('div');
+    grid.className = 'person-grid';
+
+    var amtField = document.createElement('div');
+    amtField.className = 'field';
+    amtField.innerHTML = '<label>負担額（円）</label>';
+    var amtInput = document.createElement('input');
+    amtInput.type = 'number';
+    amtInput.inputMode = 'numeric';
+    amtInput.value = p.amount;
+    amtInput.addEventListener('input', function(){
+      p.amount = parseFloat(amtInput.value) || 0;
+      saveState();
+      renderCashBox();
+      renderSummary();
+      renderCoverTotal();
+    });
+    amtField.appendChild(amtInput);
+
+    var methodField = document.createElement('div');
+    methodField.className = 'field';
+    methodField.innerHTML = '<label>支払い手段</label>';
+    var methodSelect = document.createElement('select');
+    METHODS.forEach(function(m){
+      var opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      if(m === p.method) opt.selected = true;
+      methodSelect.appendChild(opt);
+    });
+    methodSelect.addEventListener('change', function(){
+      p.method = methodSelect.value;
+      saveState();
+      renderCashBoxVisibility();
+      renderSummary();
+    });
+    methodField.appendChild(methodSelect);
+
+    grid.appendChild(amtField);
+    grid.appendChild(methodField);
+    wrap.appendChild(grid);
+
+    var cashBox = document.createElement('div');
+    cashBox.className = 'cash-box';
+
+    var receivedField = document.createElement('div');
+    receivedField.className = 'field';
+    receivedField.innerHTML = '<label>預かった金額（円）</label>';
+    var receivedInput = document.createElement('input');
+    receivedInput.type = 'number';
+    receivedInput.inputMode = 'numeric';
+    receivedInput.placeholder = '例）10000';
+    if(p.received !== null && p.received !== undefined){
+      receivedInput.value = p.received;
+    }
+    receivedInput.addEventListener('input', function(){
+      var v = receivedInput.value;
+      p.received = v === '' ? null : (parseFloat(v) || 0);
+      saveState();
+      renderChangeLine();
+      renderSummary();
+    });
+    receivedField.appendChild(receivedInput);
+    cashBox.appendChild(receivedField);
+
+    var changeLine = document.createElement('div');
+    cashBox.appendChild(changeLine);
+
+    function renderChangeLine(){
+      changeLine.innerHTML = '';
+      var line = document.createElement('div');
+      var target = payTarget(p);
+      if(p.received === null || p.received === undefined || p.received === ''){
+        line.className = 'change-line zero';
+        line.innerHTML = '<span>おつり</span><span>—</span>';
+      } else {
+        var diff = p.received - target;
+        if(diff > 0){
+          line.className = 'change-line ok';
+          line.innerHTML = '<span>返すおつり</span><span>' + yen(diff) + '</span>';
+        } else if(diff < 0){
+          line.className = 'change-line short';
+          line.innerHTML = '<span>不足</span><span>' + yen(Math.abs(diff)) + '</span>';
+        } else {
+          line.className = 'change-line zero';
+          line.innerHTML = '<span>おつり</span><span>ちょうど</span>';
+        }
+      }
+      changeLine.appendChild(line);
+    }
+
+    function renderCashBox(){
+      renderChangeLine();
+    }
+
+    function renderCashBoxVisibility(){
+      cashBox.style.display = (p.method === '現金') ? 'block' : 'none';
+    }
+
+    renderCashBoxVisibility();
+    renderChangeLine();
+    wrap.appendChild(cashBox);
+
+    // --- 立替（他の参加者の分もまとめて支払う） ---
+    var coverBox = document.createElement('div');
+    coverBox.className = 'cover-box';
+    var coverTitleEl = document.createElement('div');
+    coverTitleEl.className = 'cover-title';
+    coverTitleEl.textContent = '🤝 他の人の分もまとめて立替えますか？';
+    coverBox.appendChild(coverTitleEl);
+
+    // 対象候補：自分以外、まだ誰にも立替えられておらず、かつ自分自身が支払い担当者(=他人を立替中)ではない人
+    var candidates = state.people.filter(function(x){
+      if(x.id === p.id) return false;
+      if(x.coveredIds && x.coveredIds.length > 0) return false; // 立替担当者自身は対象外
+      var coveredByOther = state.people.some(function(y){
+        return y.id !== p.id && y.coveredIds && y.coveredIds.indexOf(x.id) !== -1;
+      });
+      if(coveredByOther) return false;
+      return true;
+    });
+
+    if(candidates.length === 0 && p.coveredIds.length === 0){
+      var noneEl = document.createElement('div');
+      noneEl.className = 'cover-none';
+      noneEl.textContent = '立替え可能な参加者がいません。';
+      coverBox.appendChild(noneEl);
+    } else {
+      candidates.forEach(function(c){
+        var opt = document.createElement('label');
+        opt.className = 'cover-option';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = p.coveredIds.indexOf(c.id) !== -1;
+        cb.addEventListener('change', function(){
+          normalizeCoveredIds(p);
+          var idx = p.coveredIds.indexOf(c.id);
+          if(cb.checked){
+            if(idx === -1) p.coveredIds.push(c.id);
+          } else {
+            if(idx !== -1) p.coveredIds.splice(idx, 1);
+          }
+          saveState();
+          render();
+        });
+        opt.appendChild(cb);
+        opt.appendChild(document.createTextNode(c.name + '（' + yen(c.amount) + '）の分も立替える'));
+        coverBox.appendChild(opt);
+      });
+    }
+
+    var coverTotal = document.createElement('div');
+    coverTotal.className = 'cover-total';
+    coverTotal.style.display = 'none';
+    coverBox.appendChild(coverTotal);
+
+    function renderCoverTotal(){
+      if(p.coveredIds.length > 0){
+        coverTotal.style.display = 'flex';
+        coverTotal.innerHTML = '<span>合計徴収額（自分＋立替分）</span><span>' + yen(payTarget(p)) + '</span>';
+      } else {
+        coverTotal.style.display = 'none';
+      }
+      renderChangeLine();
+    }
+    renderCoverTotal();
+
+    wrap.appendChild(coverBox);
+
+    var toggle = document.createElement('div');
+    toggle.className = 'paid-toggle';
+    var label = document.createElement('label');
+    var checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = !!p.paid;
+    checkbox.addEventListener('change', function(){
+      p.paid = checkbox.checked;
+      wrap.classList.toggle('paid', p.paid);
+      saveState();
+      renderSummary();
+    });
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(p.coveredIds.length > 0 ? '全員分 回収済み' : '回収済み'));
+    toggle.appendChild(label);
+    wrap.appendChild(toggle);
+
+    return wrap;
+  }
+
+  function renderPeople(){
+    state.people.forEach(normalizeCoveredIds);
+    peopleList.innerHTML = '';
+    state.people.forEach(function(p){
+      peopleList.appendChild(personCard(p));
+    });
+  }
+
+  function renderSummary(){
+    state.people.forEach(normalizeCoveredIds);
+
+    // 集計対象は「誰にも立替えられていない人」＝独立して支払う人・立替担当者のみ
+    var billed = state.people.filter(function(p){ return !findPayerOf(p.id); });
+
+    var totalTarget = state.total || 0;
+    var collected = billed.filter(function(p){ return p.paid; })
+      .reduce(function(sum, p){ return sum + payTarget(p); }, 0);
+    var unpaidCount = billed.filter(function(p){ return !p.paid; }).length;
+
+    collectedAmt.innerHTML = yen(collected) + ' <span id="collectedOf">/ ' + yen(totalTarget) + '</span>';
+    var pct = totalTarget > 0 ? Math.min(100, (collected / totalTarget) * 100) : 0;
+    progressFill.style.width = pct + '%';
+
+    var chips = [];
+    if(unpaidCount > 0){
+      chips.push('<div class="chip danger">未回収 ' + unpaidCount + '人</div>');
+    } else if(billed.length > 0){
+      chips.push('<div class="chip">全員回収済み ✓</div>');
+    }
+
+    var changeNeeded = billed.filter(function(p){
+      return p.method === '現金' && p.received !== null && p.received !== undefined && p.received !== '' && (p.received - payTarget(p)) > 0;
+    });
+    if(changeNeeded.length > 0){
+      var changeTotal = changeNeeded.reduce(function(sum, p){ return sum + (p.received - payTarget(p)); }, 0);
+      chips.push('<div class="chip warn">おつり返却待ち ' + changeNeeded.length + '人 / 合計 ' + yen(changeTotal) + '</div>');
+    }
+
+    var coveringCount = billed.filter(isPayer).length;
+    if(coveringCount > 0){
+      chips.push('<div class="chip">立替あり ' + coveringCount + '件</div>');
+    }
+
+    var byMethod = {};
+    billed.forEach(function(p){
+      byMethod[p.method] = (byMethod[p.method] || 0) + 1;
+    });
+    Object.keys(byMethod).forEach(function(m){
+      chips.push('<div class="chip">' + m + ' ' + byMethod[m] + '人</div>');
+    });
+
+    summaryChips.innerHTML = chips.join('');
+  }
+
+  function render(){
+    updateUnitButtons();
+    if(state.total){
+      totalInput.value = state.total;
+    }
+    if(state.count){
+      countInput.value = state.count;
+    }
+    previewSplit();
+
+    if(state.people && state.people.length > 0){
+      peopleSection.style.display = 'block';
+      summaryBar.style.display = 'block';
+      emptyHint.style.display = 'none';
+      renderPeople();
+      renderSummary();
+    } else {
+      peopleSection.style.display = 'none';
+      summaryBar.style.display = 'none';
+      emptyHint.style.display = 'block';
+    }
+  }
+
+  loadState();
+  render();
+})();
+</script>
+
+</body>
+</html>
