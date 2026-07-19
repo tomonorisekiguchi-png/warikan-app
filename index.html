@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>かんたん割り勘アプリ</title>
+<title>かんたん割り勘・集金アプリ</title>
 <style>
   :root{
     --main:#2f9e6e;
@@ -378,29 +378,70 @@
     display:flex;
     justify-content:space-between;
   }
+  .mode-select{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .mode-btn{
+    flex:1;
+    padding:11px 8px;
+    text-align:center;
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    color:var(--sub);
+    background:#fbfcfb;
+    line-height:1.5;
+  }
+  .mode-btn .sub{
+    display:block;
+    font-size:11px;
+    font-weight:400;
+    margin-top:2px;
+    opacity:0.85;
+  }
+  .mode-btn.active{
+    background:var(--main);
+    border-color:var(--main);
+    color:#fff;
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>💰 かんたん割り勘</h1>
+  <h1>💰 かんたん割り勘・集金</h1>
 </header>
 
 <main>
 
   <div class="card">
-    <h2>① 合計金額と人数</h2>
+    <h2>① モードと金額・人数</h2>
+
+    <div class="mode-select" id="modeSelect">
+      <div class="mode-btn active" data-mode="split">🍽 割り勘<span class="sub">お会計を人数で分ける</span></div>
+      <div class="mode-btn" data-mode="collect">💰 集金<span class="sub">1人あたりの金額を指定</span></div>
+    </div>
+
+    <div class="field" id="titleField" style="display:none;">
+      <label>集金の名目（任意）</label>
+      <input type="text" id="titleInput" placeholder="例）忘年会費・旅行積立金">
+    </div>
+
     <div class="row2">
       <div class="field">
-        <label>お会計の合計金額（円）</label>
-        <input type="number" id="totalInput" inputmode="numeric" placeholder="例）12800">
+        <label id="amountLabel">お会計の合計金額（円）</label>
+        <input type="number" id="amountInput" inputmode="numeric" placeholder="例）12800">
       </div>
       <div class="field">
         <label>参加人数</label>
         <input type="number" id="countInput" inputmode="numeric" min="1" placeholder="例）4">
       </div>
     </div>
-    <div class="field">
+    <div class="field" id="unitField">
       <label>端数の切り上げ単位</label>
       <div class="unit-select" id="unitSelect">
         <div class="unit-btn" data-unit="1">1円</div>
@@ -416,14 +457,14 @@
   </div>
 
   <div id="peopleSection" style="display:none;">
-    <div class="section-title">② 一人ずつ確認・回収チェック</div>
+    <div class="section-title" id="peopleSectionTitle">② 一人ずつ確認・回収チェック</div>
     <div id="peopleList"></div>
     <button class="add-person-btn" id="addPersonBtn">＋ 参加者を追加</button>
     <div class="reset-link"><button id="resetBtn">全部リセットする</button></div>
   </div>
 
   <div class="empty-hint" id="emptyHint">
-    合計金額と人数を入力して「計算して人数分を作成」を押すと、参加者ごとの割り勘カードが表示されます。
+    内容を入力して作成ボタンを押すと、参加者ごとのカードが表示されます。
   </div>
 
 </main>
@@ -444,6 +485,9 @@
   var STORAGE_KEY = 'warikan-app-state-v1';
 
   var state = {
+    mode: 'split',
+    title: '',
+    formAmount: null,
     total: null,
     count: null,
     unit: 100,
@@ -507,12 +551,18 @@
     return total;
   }
 
-  var totalInput = document.getElementById('totalInput');
+  var modeSelect = document.getElementById('modeSelect');
+  var titleField = document.getElementById('titleField');
+  var titleInput = document.getElementById('titleInput');
+  var amountLabel = document.getElementById('amountLabel');
+  var amountInput = document.getElementById('amountInput');
   var countInput = document.getElementById('countInput');
+  var unitField = document.getElementById('unitField');
   var unitSelect = document.getElementById('unitSelect');
   var splitResult = document.getElementById('splitResult');
   var calcBtn = document.getElementById('calcBtn');
   var peopleSection = document.getElementById('peopleSection');
+  var peopleSectionTitle = document.getElementById('peopleSectionTitle');
   var peopleList = document.getElementById('peopleList');
   var addPersonBtn = document.getElementById('addPersonBtn');
   var resetBtn = document.getElementById('resetBtn');
@@ -532,6 +582,28 @@
     });
   }
 
+  function updateModeUI(){
+    var isSplit = state.mode === 'split';
+    var btns = modeSelect.querySelectorAll('.mode-btn');
+    btns.forEach(function(b){
+      b.classList.toggle('active', b.dataset.mode === state.mode);
+    });
+    unitField.style.display = isSplit ? '' : 'none';
+    titleField.style.display = isSplit ? 'none' : '';
+    amountLabel.textContent = isSplit ? 'お会計の合計金額（円）' : '1人あたりの金額（円）';
+    amountInput.placeholder = isSplit ? '例）12800' : '例）3000';
+    calcBtn.textContent = isSplit ? '計算して人数分を作成' : '登録して人数分を作成';
+  }
+
+  modeSelect.addEventListener('click', function(e){
+    var btn = e.target.closest('.mode-btn');
+    if(!btn) return;
+    state.mode = btn.dataset.mode;
+    updateModeUI();
+    previewSplit();
+    saveState();
+  });
+
   unitSelect.addEventListener('click', function(e){
     var btn = e.target.closest('.unit-btn');
     if(!btn) return;
@@ -542,43 +614,67 @@
   });
 
   function previewSplit(){
-    var total = parseFloat(totalInput.value);
     var count = parseInt(countInput.value, 10);
-    if(!total || total <= 0 || !count || count <= 0){
-      splitResult.style.display = 'none';
-      return;
+    var amt = parseFloat(amountInput.value);
+
+    if(state.mode === 'split'){
+      if(!amt || amt <= 0 || !count || count <= 0){
+        splitResult.style.display = 'none';
+        return;
+      }
+      var raw = amt / count;
+      var perPerson = ceilTo(raw, state.unit);
+      var collectedTotal = perPerson * count;
+      var surplus = collectedTotal - amt;
+      splitResult.style.display = 'block';
+      splitResult.innerHTML =
+        '一人あたり　<span class="big">' + yen(perPerson) + '</span><br>' +
+        '<span class="note">端数処理前：' + yen(raw) + ' / ' + count + '人</span><br>' +
+        '<span class="note">集金予定合計：' + yen(collectedTotal) + '（合計より ' + yen(surplus) + ' 多く集まります。予備費か幹事負担にどうぞ）</span>';
+    } else {
+      if(!amt || amt <= 0 || !count || count <= 0){
+        splitResult.style.display = 'none';
+        return;
+      }
+      var perPerson2 = Math.round(amt);
+      var collectedTotal2 = perPerson2 * count;
+      splitResult.style.display = 'block';
+      splitResult.innerHTML =
+        '一人あたり　<span class="big">' + yen(perPerson2) + '</span><br>' +
+        '<span class="note">集金予定合計：' + yen(collectedTotal2) + '（' + count + '人 × ' + yen(perPerson2) + '）</span>';
     }
-    var raw = total / count;
-    var perPerson = ceilTo(raw, state.unit);
-    var collectedTotal = perPerson * count;
-    var surplus = collectedTotal - total;
-    splitResult.style.display = 'block';
-    splitResult.innerHTML =
-      '一人あたり　<span class="big">' + yen(perPerson) + '</span><br>' +
-      '<span class="note">端数処理前：' + yen(raw) + ' / ' + count + '人</span><br>' +
-      '<span class="note">集金予定合計：' + yen(collectedTotal) + '（合計より ' + yen(surplus) + ' 多く集まります。予備費か幹事負担にどうぞ）</span>';
   }
 
-  [totalInput, countInput].forEach(function(el){
+  [amountInput, countInput, titleInput].forEach(function(el){
     el.addEventListener('input', previewSplit);
   });
 
   calcBtn.addEventListener('click', function(){
-    var total = parseFloat(totalInput.value);
     var count = parseInt(countInput.value, 10);
-    if(!total || total <= 0){
-      alert('合計金額を入力してください。');
+    var amt = parseFloat(amountInput.value);
+
+    if(!amt || amt <= 0){
+      alert(state.mode === 'split' ? '合計金額を入力してください。' : '1人あたりの金額を入力してください。');
       return;
     }
     if(!count || count <= 0){
       alert('参加人数を入力してください。');
       return;
     }
-    var raw = total / count;
-    var perPerson = ceilTo(raw, state.unit);
 
-    state.total = total;
+    var perPerson;
+    if(state.mode === 'split'){
+      var raw = amt / count;
+      perPerson = ceilTo(raw, state.unit);
+      state.total = amt;
+    } else {
+      perPerson = Math.round(amt);
+      state.total = perPerson * count;
+    }
+
+    state.formAmount = amt;
     state.count = count;
+    state.title = state.mode === 'collect' ? (titleInput.value || '') : '';
     state.people = [];
     for(var i = 0; i < count; i++){
       state.people.push({
@@ -596,8 +692,13 @@
   });
 
   addPersonBtn.addEventListener('click', function(){
-    var raw = state.total && state.people.length ? state.total / state.people.length : 0;
-    var perPerson = ceilTo(raw, state.unit) || 0;
+    var perPerson;
+    if(state.mode === 'collect'){
+      perPerson = Math.round(state.formAmount) || 0;
+    } else {
+      var raw = state.total && state.people.length ? state.total / state.people.length : 0;
+      perPerson = ceilTo(raw, state.unit) || 0;
+    }
     state.people.push({
       id: 'p' + Date.now(),
       name: '参加者' + (state.people.length + 1),
@@ -613,10 +714,12 @@
 
   resetBtn.addEventListener('click', function(){
     if(!confirm('入力内容を全てリセットします。よろしいですか？')) return;
-    state = { total: null, count: null, unit: 100, people: [] };
-    totalInput.value = '';
+    state = { mode: 'split', title: '', formAmount: null, total: null, count: null, unit: 100, people: [] };
+    amountInput.value = '';
     countInput.value = '';
+    titleInput.value = '';
     updateUnitButtons();
+    updateModeUI();
     splitResult.style.display = 'none';
     saveState();
     render();
@@ -932,12 +1035,17 @@
   }
 
   function render(){
+    if(!state.mode) state.mode = 'split';
     updateUnitButtons();
-    if(state.total){
-      totalInput.value = state.total;
+    updateModeUI();
+    if(state.formAmount){
+      amountInput.value = state.formAmount;
     }
     if(state.count){
       countInput.value = state.count;
+    }
+    if(state.title){
+      titleInput.value = state.title;
     }
     previewSplit();
 
@@ -945,6 +1053,7 @@
       peopleSection.style.display = 'block';
       summaryBar.style.display = 'block';
       emptyHint.style.display = 'none';
+      peopleSectionTitle.textContent = '② ' + (state.title ? state.title + ' の回収チェック' : '一人ずつ確認・回収チェック');
       renderPeople();
       renderSummary();
     } else {
